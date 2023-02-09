@@ -29,7 +29,12 @@ class Yosys(Edatool):
                     {
                         "name": "output_format",
                         "type": "String",
-                        "desc": "Output file format. Legal values are *json*, *edif*, *blif*",
+                        "desc": "Output file format. Legal values are *json*, *edif*, *blif*, *verilog*",
+                    },
+                    {
+                        "name": "output_name",
+                        "type": "String",
+                        "desc": "Output file name. [Optional]",
                     },
                     {
                         "name": "yosys_as_subtool",
@@ -83,7 +88,9 @@ class Yosys(Edatool):
         self.edam["files"] = unused_files
 
         output_format = self.tool_options.get("output_format", "blif")
-        default_target = f"{self.name}.{output_format}"
+        default_target = self.tool_options.get(
+            "output_name", f"{self.name}.{output_format}"
+        )
 
         self.edam["files"].append(
             {
@@ -122,8 +129,10 @@ class Yosys(Edatool):
             "synth_command": "synth_" + arch,
             "synth_options": " ".join(self.tool_options.get("yosys_synth_options", "")),
             "write_command": "write_" + output_format,
-            "output_format": output_format,
-            "output_opts": "-pvector bra " if arch == "xilinx" else "",
+            "output_name": default_target,
+            "output_opts": "-pvector bra "
+            if (arch == "xilinx" and output_format == "edif")
+            else "",
             "yosys_template": template,
             "name": self.name,
         }
@@ -146,5 +155,5 @@ class Yosys(Edatool):
         if self.tool_options.get("yosys_as_subtool"):
             self.commands = commands.commands
         else:
-            commands.set_default_target(f"{self.name}.{output_format}")
+            commands.set_default_target(default_target)
             commands.write(os.path.join(self.work_root, "Makefile"))
